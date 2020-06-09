@@ -31,32 +31,31 @@ class Scene extends Phaser.Scene
         this.background = this.add.image(0,0,"slotContainer");
         this.background.setOrigin(0,0);
         
-        // var buttonPositionX = 870;
-        // var buttonPositionY = 110;
-        // this.spinButtonImage = this.add.image(buttonPositionX ,buttonPositionY, "button_spin");
-        // this.spinAndStopButton = new Button(this.spinButtonImage, buttonPositionX, buttonPositionY, "button_spin");
+                
+        this.text = this.add.text(290, 0, "Welcome to the slot Machine!", {color: "Yellow"});
+
+        var buttonPositionX = 870;
+        var buttonPositionY = 110;
+        this.buttonSpin = this.add.sprite(buttonPositionX, buttonPositionY, 'button_spin').setInteractive();
+        this.buttonStop = this.add.sprite(buttonPositionX, buttonPositionY, 'button_stop').setInteractive();
+        this.buttonStop.setVisible(false);
+
+        this.buttonSpin.on('pointerdown', () => {
+            this.buttonSpin.setVisible(false);
+            this.buttonStop.setVisible(true);
+          })
+
+        this.buttonStop.on('pointerdown', () => {
+            this.buttonSpin.setVisible(true);
+            this.buttonStop.setVisible(false);
+          })
 
         var deltaX = 0;
         var deltaY = 0;
         
         var potionsStr = ["potion1","potion2","potion3","potion4"];
         var randomIndex = 0;
-
-        // for(var row = 0; row < this.numOfRowsInPotionsArray; row++)
-        // {
-        //     for(var col = 0; col < this.numOfcolsInPotionsArray; col++)
-        //     {
-        //         randomIndex = Math.floor(Math.random() * potionsStr.length); 
-        //         deltaX = this.potionWidth * col;
-        //         deltaY = this.potionHeight * row;
-        //         var positionX = this.leftSlotContainer + deltaX;
-        //         var positionY = this.topSlotContainer + deltaY;
-        //         this.potionImage = this.add.image(positionX , positionY, potionsStr[randomIndex]);
-        //         this.potions[row][col] = new Potion(this.potionImage, positionX, positionY, potionsStr[randomIndex]);
-        //     }       
-        // }
-
-        
+  
         for(var row = 0; row < this.numOfRowsInPotionsArray; row++)
         {
             for(var col = 0; col < this.numOfcolsInPotionsArray; col++)
@@ -70,12 +69,17 @@ class Scene extends Phaser.Scene
                 this.sprites.push(new Potion(PIXI.Texture.from("assets/images/" + potionsStr[randomIndex]+ ".png")));
             }       
         }
-
     }
 
     update()
     {
         this.sprites.forEach(sprite => sprite.update())
+    }
+ 
+    actionOnClick()
+    {
+    
+        
     }
 
     spinSlotMachine()
