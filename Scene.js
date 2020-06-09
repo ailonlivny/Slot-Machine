@@ -10,6 +10,9 @@ class Scene extends Phaser.Scene
         this.numOfRowsInPotionsArray = 3;
         this.numOfcolsInPotionsArray = 5;
         this.sprites = [];
+        this.spinButtonWasClicked = false;
+        this.lastTimeSpinButtonWasClicked = 0;
+        this.oneSecond = 1;
     }
 
     preload()
@@ -30,25 +33,17 @@ class Scene extends Phaser.Scene
     {
         this.background = this.add.image(0,0,"slotContainer");
         this.background.setOrigin(0,0);
-        
-                
+           
         this.text = this.add.text(290, 0, "Welcome to the slot Machine!", {color: "Yellow"});
 
         var buttonPositionX = 870;
         var buttonPositionY = 110;
-        this.buttonSpin = this.add.sprite(buttonPositionX, buttonPositionY, 'button_spin').setInteractive();
-        this.buttonStop = this.add.sprite(buttonPositionX, buttonPositionY, 'button_stop').setInteractive();
-        this.buttonStop.setVisible(false);
+        this.spinButton = this.add.sprite(buttonPositionX, buttonPositionY, 'button_spin').setInteractive();
+        this.stopButton = this.add.sprite(buttonPositionX, buttonPositionY, 'button_stop').setInteractive();
+        this.stopButton.setVisible(false);
 
-        this.buttonSpin.on('pointerdown', () => {
-            this.buttonSpin.setVisible(false);
-            this.buttonStop.setVisible(true);
-          })
-
-        this.buttonStop.on('pointerdown', () => {
-            this.buttonSpin.setVisible(true);
-            this.buttonStop.setVisible(false);
-          })
+        this.spinButton.on('pointerdown', () => {this.spinButtonOnClick()})
+        this.stopButton.on('pointerdown',  () => {this.stopButtonOnClick()})
 
         var deltaX = 0;
         var deltaY = 0;
@@ -73,9 +68,36 @@ class Scene extends Phaser.Scene
 
     update()
     {
+        this.text.setText(this.time.now * 0.001);
         this.sprites.forEach(sprite => sprite.update())
+
+        if(this.spinButtonWasClicked && this.lastTimeSpinButtonWasClicked + this.oneSecond > this.time.now * 0.001)
+        {
+            this.stopButton.setAlpha(0.5);
+        }
+        else if(this.spinButtonWasClicked && this.lastTimeSpinButtonWasClicked + this.oneSecond <= this.time.now * 0.001)
+        {
+            this.stopButton.setAlpha(1);
+            this.stopButton.setInteractive();
+        }
     }
- 
+    
+    spinButtonOnClick()
+    {
+        this.spinButton.setVisible(false);
+        this.stopButton.setVisible(true);
+        this.spinButtonWasClicked = true;
+        this.stopButton.disableInteractive();
+        this.lastTimeSpinButtonWasClicked = this.time.now * 0.001;
+    }
+
+    stopButtonOnClick()
+    {
+        this.spinButton.setVisible(true);
+        this.stopButton.setVisible(false);
+        this.stopButton.setAlpha(0.5);
+    }
+
     actionOnClick()
     {
     
@@ -92,3 +114,4 @@ class Scene extends Phaser.Scene
 
     }
 }
+

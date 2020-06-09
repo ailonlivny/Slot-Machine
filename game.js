@@ -1,7 +1,3 @@
-// import * as PIXI from 'pixi.js'
-
-// const app = new PIXI.Application();
-
 window.onload = function()
 {
     var config = 
@@ -20,3 +16,4 @@ window.onload = function()
 
     var game = new Phaser.Game(config);
 }
+
