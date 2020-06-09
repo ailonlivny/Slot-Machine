@@ -1,7 +1,14 @@
-class Potion 
+// import * as PIXI from "pixi.js";
+
+class Potion extends PIXI.Sprite
 {
-    constructor(i_image) 
+    constructor(imageURL)
     {
-      this.image = i_image;
+        super(imageURL);
+    }
+
+    update()
+    {
+        
     }
 }
