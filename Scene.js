@@ -3,11 +3,12 @@ class Scene extends Phaser.Scene
     constructor()
     {
         super("playGame");
-        this.leftSlotContainer = 143;
-        this.topSlotContainer = 173;
+        this.leftBoundSlotContainer = 143;
+        this.topBoundSlotContainer = 173;
         this.potionHeight = 140;
         this.potionWidth = 138;
-        this.bottomSlotContainer = this.topSlotContainer + this.potionHeight * 3;
+        this.threePotionsHeight = 415;
+        this.bottomSlotContainer = this.topBoundSlotContainer + this.potionHeight * 3;
         this.numOfReels = 5;
         this.potionsArray = [];
         this.spinButtonWasClicked = false;
@@ -16,16 +17,16 @@ class Scene extends Phaser.Scene
         this.oneSecond = 1;
         this.twoSeconds = 2;
         this.prevTimeTotalSeconds = 0;
-        this.velocity = 100;
         this.isAllReelsInSlotMachineSpinning = false;
         this.isAllReelsStoppingInSlotMachine = false;
         this.isReelsStopingOneByOneInSlotMachine = false;
-        this.originTilePositionY = this.topSlotContainer + this.potionHeight;
         this.stopReelsOneByOneStartTime = 0;
         this.isReelsStopped = [false,false,false,false,false]; 
+        this.reelsSpeed = 0;
+        this.potionSpritesheetHeight = 1090;
     }
 
-    preload()
+    preload() // Loads game files (images and audio)
     {
         this.load.image("slotContainer","assets/images/slotContainer.png");
         this.load.spritesheet("potionsCol", "assets/images/potionsCol.png",{ frameWidth: 142, frameHeight: 550});
@@ -35,33 +36,36 @@ class Scene extends Phaser.Scene
         this.load.audio('spin_sound', ['assets/Spin.wav']);      
     }
 
-    create()
+    create()  // Create sounds, sprites and images objects
     {
-        this.background = this.add.image(0,0,"slotContainer");
-        this.background.setOrigin(0,0);
-           
-        this.text = this.add.text(290, 0, "Welcome to the slot Machine!", {color: "Yellow"});
-
+        // Init container object in the container.
+        this.text = this.add.text(290, 0, "Welcome to Ailon slot Machine! :)", {color: "Yellow"});
+        this.slotContainerImage = this.add.image(0,0,"slotContainer");
+        this.slotContainerImage.setOrigin(0,0);
+        
+        // Init buttons objects in the container.
         var buttonPositionX = 870;
         var buttonPositionY = 110;
+
         this.spinButton = this.add.sprite(buttonPositionX, buttonPositionY, 'button_spin').setInteractive();
-        this.stopButton = this.add.sprite(buttonPositionX, buttonPositionY, 'button_stop')
-        this.stopButton.setVisible(false);
+        this.stopButton = this.add.sprite(buttonPositionX, buttonPositionY, 'button_stop').setVisible(false);
 
         this.spinButton.on('pointerdown', () => {this.spinButtonOnClick()})
         this.stopButton.on('pointerdown',  () => {this.stopButtonOnClick()})
 
-        var deltaX = 0;
+        var deltaXfromLeftBoundSlotContainer = 0;
 
-        for(var col = 0; col < this.numOfReels; col++)
+        // Init reels objects in the container.
+        for(var col = 0; col < this.numOfReels; col++) 
         {
-            deltaX = this.potionWidth * col;
-            var positionX = this.leftSlotContainer + deltaX;
-            var positionY = this.topSlotContainer + this.potionHeight;
-            var potionTileSprite = this.add.tileSprite(positionX, positionY, 140, 415, 'potionsCol');
+            deltaXfromLeftBoundSlotContainer = this.potionWidth * col;
+            var positionX = this.leftBoundSlotContainer + deltaXfromLeftBoundSlotContainer;
+            var positionY = this.topBoundSlotContainer + this.potionHeight;
+            var potionTileSprite = this.add.tileSprite(positionX, positionY,  this.potionWidth, this.threePotionsHeight, 'potionsCol');
             this.potionsArray.push(potionTileSprite);
-        }
-        
+        }   
+
+        // Init sounds objects
         this.bgSound = this.sound.add("bg_sound", { loop: "true" });
         this.spinSound = this.sound.add("spin_sound", {loop: "false"}); 
         this.bgSound.play();
@@ -69,7 +73,9 @@ class Scene extends Phaser.Scene
 
     update()
     {
-        var timeNow = (this.time.now * 0.001);
+        var timeNowTotalSeconds = (this.time.now * 0.001);
+        var elapsedGameTime = timeNowTotalSeconds - this.prevTimeTotalSeconds;
+        this.reelsSpeed =  1200 * elapsedGameTime;
 
         if(this.isAllReelsInSlotMachineSpinning)
         {
@@ -83,45 +89,47 @@ class Scene extends Phaser.Scene
 
         if(this.isReelsStopingOneByOneInSlotMachine)
         {
-            this.stopReelsOneByOne(timeNow);
+            this.stopReelsOneByOne(timeNowTotalSeconds, elapsedGameTime);
         }
 
-        if(this.spinButtonWasClicked && (this.time.now * 0.001) < this.lastTimeSpinButtonWasClicked + this.oneSecond) // spin button was press, stop button set opacity 50%
+        if(this.spinButtonWasClicked && timeNowTotalSeconds < this.lastTimeSpinButtonWasClicked + this.oneSecond) // spin button was press, stop button set opacity 50% 
         {
             this.stopButton.setAlpha(0.5);
         }
-        else if(this.spinButtonWasClicked && (this.time.now * 0.001) >= this.lastTimeSpinButtonWasClicked + this.twoSeconds && this.isAllReelsInSlotMachineSpinning) // The spin is automatic stop (reel by reel)
+        else if(this.spinButtonWasClicked && timeNowTotalSeconds >= this.lastTimeSpinButtonWasClicked + this.twoSeconds && this.isAllReelsInSlotMachineSpinning) // The spin will stop automatic , reel by reel
         {
+            this.spinButton.disableInteractive();
             this.spinButton.setVisible(true);
             this.stopButton.setVisible(false);
             this.isAllReelsInSlotMachineSpinning = false;
             this.isReelsStopingOneByOneInSlotMachine = true;
-            this.stopReelsOneByOneStartTime = (this.time.now * 0.001);
+            this.stopReelsOneByOneStartTime = timeNowTotalSeconds;
         }
-        else if(this.stopButtonWasClicked && (this.time.now * 0.001) >= this.lastTimeSpinButtonWasClicked + this.oneSecond) // The spin is stopping by pressed stop button
+        else if(this.stopButtonWasClicked && timeNowTotalSeconds >= this.lastTimeSpinButtonWasClicked + this.oneSecond) // Stop button was pressed, all reels spin need to stop together
         {
             this.isAllReelsInSlotMachineSpinning = false;
             this.isAllReelsStoppingInSlotMachine = true;
             this.stopButtonWasClicked = false;
         }
-        else if(this.spinButtonWasClicked && !this.stopButtonWasClicked && (this.time.now * 0.001) >= this.lastTimeSpinButtonWasClicked + this.oneSecond) // spin button was press before 1 sec, stop button set opacity 100% and return pressd.
+        else if(this.spinButtonWasClicked && !this.stopButtonWasClicked && timeNowTotalSeconds >= this.lastTimeSpinButtonWasClicked + this.oneSecond) // spin button was pressed 1 sec before, stop button return active
         {
             this.stopButton.setAlpha(1);
             this.stopButton.setInteractive();
         }
 
-        this.prevTimeTotalSeconds = timeNow;
+        this.prevTimeTotalSeconds = timeNowTotalSeconds;
     }
     
     spinButtonOnClick()
     {
+        var timeNowTotalSeconds = (this.time.now * 0.001);
         this.spinButton.setVisible(false);
         this.stopButton.setVisible(true);
         this.spinButtonWasClicked = true;
         this.stopButtonWasClicked = false;
         this.isAllReelsInSlotMachineSpinning = true;
         this.stopButton.disableInteractive();
-        this.lastTimeSpinButtonWasClicked = this.time.now * 0.001;
+        this.lastTimeSpinButtonWasClicked = timeNowTotalSeconds;
         this.spinSound.play();
     }
 
@@ -132,25 +140,21 @@ class Scene extends Phaser.Scene
         this.spinButton.disableInteractive();
     }
 
-    spinReels()
+    spinReels() // Move positions reels from up to down
     {
-        var elapsedGameTime = (this.time.now * 0.001) - this.prevTimeTotalSeconds;
-
         for(var potion of this.potionsArray)
         {  
-            potion.tilePositionY += 1200 * elapsedGameTime;          
+            potion.tilePositionY += this.reelsSpeed;          
         }
     }
 
-    stopReelsTogether()
+    stopReelsTogether() // Move positions reels from up to down, will stop when a "full round" was finished
     {
-        var elapsedGameTime = (this.time.now * 0.001) - this.prevTimeTotalSeconds;
-
         for(var potion of this.potionsArray)
         {  
-            if((1200 * elapsedGameTime) + (potion.tilePositionY % 1090) > 1090)
+            if(this.reelsSpeed + (potion.tilePositionY % this.potionSpritesheetHeight) > this.potionSpritesheetHeight) // Calculate if delta distance from positions postion to entry point is smaller than potions speed
             {
-                potion.tilePositionY = 1090;
+                potion.tilePositionY = this.potionSpritesheetHeight; // finish a "full round" to entry point
                 this.isAllReelsStoppingInSlotMachine = false;
                 this.spinButton.setInteractive();
                 this.spinButton.setVisible(true);
@@ -159,46 +163,44 @@ class Scene extends Phaser.Scene
             }
             else
             {
-                potion.tilePositionY += 1200 * elapsedGameTime;
+                potion.tilePositionY += this.reelsSpeed;
             }                   
         }
     }
 
-    stopReelsOneByOne(timeNowTotalSeconds)
-    {     
-        var elapsedGameTime = timeNowTotalSeconds - this.prevTimeTotalSeconds;
-       
+    stopReelsOneByOne(timeNowTotalSeconds, elapsedGameTime) // Move positions reels from up to down, will stop reels from left to right for each second
+    {            
         for(var idx = 0; idx < this.potionsArray.length; idx++)
         {
-            if(timeNowTotalSeconds - this.stopReelsOneByOneStartTime >= idx*1 && !this.isReelsStopped[idx])
+            if(timeNowTotalSeconds - this.stopReelsOneByOneStartTime >= idx && !this.isReelsStopped[idx]) // chacks each potion if stiil spining and his time to stop arrived
             {
-                this.stopReel(this.potionsArray[idx],idx, elapsedGameTime);
-                
+                this.stopReel(this.potionsArray[idx], idx, elapsedGameTime);             
             }
-            else if(!this.isReelsStopped[idx])
+            else if(!this.isReelsStopped[idx]) // Move positions reels 
             {
-                this.potionsArray[idx].tilePositionY += 1200 * elapsedGameTime;   
+                this.potionsArray[idx].tilePositionY += this.reelsSpeed;   
             }
         }
 
-        if(this.isReelsStopped.every(elem=> elem == true))
+        if(this.isReelsStopped.every(elem=> elem == true)) // If all reels was stopped
         {
             this.isReelsStopingOneByOneInSlotMachine = false;
             this.isReelsStopped = this.isReelsStopped.map(elem => !elem);
             this.spinSound.stop();
+            this.spinButton.setInteractive();
         }
     }
 
-    stopReel(potion,idx,elapsedGameTime)
+    stopReel(potion, idx)
     {
-        if((1200 * elapsedGameTime) + (potion.tilePositionY % 1090) > 1090)
+        if(this.reelsSpeed + (potion.tilePositionY % this.potionSpritesheetHeight) > this.potionSpritesheetHeight) // Calculate if delta distance from positions postion to entry point is smaller than potions speed
         {
-            potion.tilePositionY = 1090;
+            potion.tilePositionY = this.potionSpritesheetHeight; // finish a "full round" to entry point
             this.isReelsStopped[idx] = true;
         }
         else
         {
-            potion.tilePositionY += 1200 * elapsedGameTime;
+            potion.tilePositionY += this.reelsSpeed;
         }   
     }
 }
