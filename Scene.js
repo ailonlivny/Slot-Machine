@@ -8,7 +8,6 @@ class Scene extends Phaser.Scene
         this.potionHeight = 140;
         this.potionWidth = 138;
         this.bottomSlotContainer = this.topSlotContainer + this.potionHeight * 3;
-        this.numOfRowsInPotionsArray = 3;
         this.numOfcolsInPotionsArray = 5;
         this.potionsArray = [];
         this.spinButtonWasClicked = false;
@@ -18,16 +17,15 @@ class Scene extends Phaser.Scene
         this.twoSeconds = 2;
         this.prevTimeTotalSeconds = 0;
         this.velocity = 100;
-        this.potionsStr = ["potion1","potion2","potion3","potion4"];
-        this.randomIndex = 0;
         this.isAllReelsInSlotMachineSpinning = false;
-        this.countPositionY = 0;
+        this.isAllReelsInSlotMachineStopping = false;
+        this.originTilePositionY = this.topSlotContainer + this.potionHeight;
     }
 
     preload()
     {
         this.load.image("slotContainer","assets/images/slotContainer.png");
-        this.load.spritesheet("potionsCol", "assets/images/potionsCol.png",{ frameWidth: 142, frameHeight: 415, endFrame: 830 });
+        this.load.spritesheet("potionsCol", "assets/images/potionsCol.png",{ frameWidth: 142, frameHeight: 550});
         this.load.image("button_spin","assets/images/button_spin.png");
         this.load.image("button_stop","assets/images/button_stop.png");      
     }
@@ -42,7 +40,7 @@ class Scene extends Phaser.Scene
         var buttonPositionX = 870;
         var buttonPositionY = 110;
         this.spinButton = this.add.sprite(buttonPositionX, buttonPositionY, 'button_spin').setInteractive();
-        this.stopButton = this.add.sprite(buttonPositionX, buttonPositionY, 'button_stop').setInteractive();
+        this.stopButton = this.add.sprite(buttonPositionX, buttonPositionY, 'button_stop')
         this.stopButton.setVisible(false);
 
         this.spinButton.on('pointerdown', () => {this.spinButtonOnClick()})
@@ -64,10 +62,29 @@ class Scene extends Phaser.Scene
     {
         if(this.isAllReelsInSlotMachineSpinning)
         {
+            var elapsedGameTime = (this.time.now * 0.001) - this.prevTimeTotalSeconds;
+
             for(var potion of this.potionsArray)
-            {
-                potion.tilePositionY += 24;
-                this.countPositionY += 24;
+            {  
+                potion.tilePositionY += 1200 * elapsedGameTime;          
+            }
+        }
+
+        if(this.isAllReelsInSlotMachineStopping)
+        {
+            var elapsedGameTime = (this.time.now * 0.001) - this.prevTimeTotalSeconds;
+
+            for(var potion of this.potionsArray)
+            {  
+                if((1200 * elapsedGameTime) + (potion.tilePositionY % 1090) > 1090)
+                {
+                    potion.tilePositionY = 1090;
+                    this.isAllReelsInSlotMachineStopping = false;
+                }
+                else
+                {
+                    potion.tilePositionY += 1200 * elapsedGameTime;
+                }                   
             }
         }
 
@@ -78,12 +95,22 @@ class Scene extends Phaser.Scene
         else if(this.spinButtonWasClicked && (this.time.now * 0.001) >= this.lastTimeSpinButtonWasClicked + this.twoSeconds) // Automatic stop spin, stop reel by reel.
         {
             this.isAllReelsInSlotMachineSpinning = false;
+            this.spinButton.setVisible(true);
+            this.stopButton.setVisible(false);
         }
-        else if(this.spinButtonWasClicked && (this.time.now * 0.001) >= this.lastTimeSpinButtonWasClicked + this.oneSecond)
+        else if(this.stopButtonWasClicked && (this.time.now * 0.001) >= this.lastTimeSpinButtonWasClicked + this.oneSecond)
+        {
+            this.isAllReelsInSlotMachineSpinning = false;
+            this.isAllReelsInSlotMachineStopping = true;
+            this.stopButtonWasClicked = false;
+        }
+        else if(this.spinButtonWasClicked && !this.stopButtonWasClicked && (this.time.now * 0.001) >= this.lastTimeSpinButtonWasClicked + this.oneSecond)
         {
             this.stopButton.setAlpha(1);
             this.stopButton.setInteractive();
         }
+
+        this.prevTimeTotalSeconds = (this.time.now * 0.001);
     }
     
     spinButtonOnClick()
@@ -91,6 +118,7 @@ class Scene extends Phaser.Scene
         this.spinButton.setVisible(false);
         this.stopButton.setVisible(true);
         this.spinButtonWasClicked = true;
+        this.stopButtonWasClicked = false;
         this.isAllReelsInSlotMachineSpinning = true;
         this.stopButton.disableInteractive();
         this.lastTimeSpinButtonWasClicked = this.time.now * 0.001;
@@ -99,10 +127,8 @@ class Scene extends Phaser.Scene
     stopButtonOnClick()
     {
         this.stopButtonWasClicked = true;
-        //Stop all reels together
+        this.spinButtonWasClicked = false;
         this.spinButton.setVisible(true);
         this.stopButton.setVisible(false);
-        this.isAllReelsInSlotMachineSpinning = false;
-     
     }
 }
