@@ -8,7 +8,7 @@ class Scene extends Phaser.Scene
         this.potionHeight = 140;
         this.potionWidth = 138;
         this.bottomSlotContainer = this.topSlotContainer + this.potionHeight * 3;
-        this.numOfcolsInPotionsArray = 5;
+        this.numOfReels = 5;
         this.potionsArray = [];
         this.spinButtonWasClicked = false;
         this.stopButtonWasClicked = false;
@@ -18,8 +18,11 @@ class Scene extends Phaser.Scene
         this.prevTimeTotalSeconds = 0;
         this.velocity = 100;
         this.isAllReelsInSlotMachineSpinning = false;
-        this.isAllReelsInSlotMachineStopping = false;
+        this.isAllReelsStoppingInSlotMachine = false;
+        this.isReelsStopingOneByOneInSlotMachine = false;
         this.originTilePositionY = this.topSlotContainer + this.potionHeight;
+        this.stopReelsOneByOneStartTime = 0;
+        this.isReelsStopped = [false,false,false,false,false]; 
     }
 
     preload()
@@ -48,7 +51,7 @@ class Scene extends Phaser.Scene
 
         var deltaX = 0;
 
-        for(var col = 0; col < this.numOfcolsInPotionsArray; col++)
+        for(var col = 0; col < this.numOfReels; col++)
         {
             deltaX = this.potionWidth * col;
             var positionX = this.leftSlotContainer + deltaX;
@@ -60,57 +63,49 @@ class Scene extends Phaser.Scene
 
     update()
     {
+        var timeNow = (this.time.now * 0.001);
+
         if(this.isAllReelsInSlotMachineSpinning)
         {
-            var elapsedGameTime = (this.time.now * 0.001) - this.prevTimeTotalSeconds;
-
-            for(var potion of this.potionsArray)
-            {  
-                potion.tilePositionY += 1200 * elapsedGameTime;          
-            }
+            this.spinReels();
         }
 
-        if(this.isAllReelsInSlotMachineStopping)
+        if(this.isAllReelsStoppingInSlotMachine)
         {
-            var elapsedGameTime = (this.time.now * 0.001) - this.prevTimeTotalSeconds;
-
-            for(var potion of this.potionsArray)
-            {  
-                if((1200 * elapsedGameTime) + (potion.tilePositionY % 1090) > 1090)
-                {
-                    potion.tilePositionY = 1090;
-                    this.isAllReelsInSlotMachineStopping = false;
-                }
-                else
-                {
-                    potion.tilePositionY += 1200 * elapsedGameTime;
-                }                   
-            }
+            this.stopReelsTogether();
         }
 
-        if(this.spinButtonWasClicked && (this.time.now * 0.001) < this.lastTimeSpinButtonWasClicked + this.oneSecond) 
+        if(this.isReelsStopingOneByOneInSlotMachine)
+        {
+            this.stopReelsOneByOne(timeNow);
+        }
+
+        if(this.spinButtonWasClicked && (this.time.now * 0.001) < this.lastTimeSpinButtonWasClicked + this.oneSecond) // spin button was press, stop button set opacity 50%
         {
             this.stopButton.setAlpha(0.5);
         }
-        else if(this.spinButtonWasClicked && (this.time.now * 0.001) >= this.lastTimeSpinButtonWasClicked + this.twoSeconds) // Automatic stop spin, stop reel by reel.
+        else if(this.spinButtonWasClicked && (this.time.now * 0.001) >= this.lastTimeSpinButtonWasClicked + this.twoSeconds && this.isAllReelsInSlotMachineSpinning) // The spin is automatic stop (reel by reel)
         {
-            this.isAllReelsInSlotMachineSpinning = false;
             this.spinButton.setVisible(true);
             this.stopButton.setVisible(false);
+            this.isAllReelsInSlotMachineSpinning = false;
+            this.isReelsStopingOneByOneInSlotMachine = true;
+            this.stopReelsOneByOneStartTime = (this.time.now * 0.001);
         }
-        else if(this.stopButtonWasClicked && (this.time.now * 0.001) >= this.lastTimeSpinButtonWasClicked + this.oneSecond)
+        else if(this.stopButtonWasClicked && (this.time.now * 0.001) >= this.lastTimeSpinButtonWasClicked + this.oneSecond) // The spin is stopping by pressed stop button
         {
             this.isAllReelsInSlotMachineSpinning = false;
-            this.isAllReelsInSlotMachineStopping = true;
+            this.isAllReelsStoppingInSlotMachine = true;
             this.stopButtonWasClicked = false;
         }
-        else if(this.spinButtonWasClicked && !this.stopButtonWasClicked && (this.time.now * 0.001) >= this.lastTimeSpinButtonWasClicked + this.oneSecond)
+        else if(this.spinButtonWasClicked && !this.stopButtonWasClicked && (this.time.now * 0.001) >= this.lastTimeSpinButtonWasClicked + this.oneSecond) // spin button was press before 1 sec, stop button set opacity 100% and return pressd.
         {
             this.stopButton.setAlpha(1);
             this.stopButton.setInteractive();
         }
 
-        this.prevTimeTotalSeconds = (this.time.now * 0.001);
+        this.prevTimeTotalSeconds = timeNow;
+
     }
     
     spinButtonOnClick()
@@ -128,7 +123,74 @@ class Scene extends Phaser.Scene
     {
         this.stopButtonWasClicked = true;
         this.spinButtonWasClicked = false;
-        this.spinButton.setVisible(true);
-        this.stopButton.setVisible(false);
+        this.spinButton.disableInteractive();
+    }
+
+    spinReels()
+    {
+        var elapsedGameTime = (this.time.now * 0.001) - this.prevTimeTotalSeconds;
+
+        for(var potion of this.potionsArray)
+        {  
+            potion.tilePositionY += 1200 * elapsedGameTime;          
+        }
+    }
+
+    stopReelsTogether()
+    {
+        var elapsedGameTime = (this.time.now * 0.001) - this.prevTimeTotalSeconds;
+
+        for(var potion of this.potionsArray)
+        {  
+            if((1200 * elapsedGameTime) + (potion.tilePositionY % 1090) > 1090)
+            {
+                potion.tilePositionY = 1090;
+                this.isAllReelsStoppingInSlotMachine = false;
+                this.spinButton.setInteractive();
+                this.spinButton.setVisible(true);
+                this.stopButton.setVisible(false);
+            }
+            else
+            {
+                potion.tilePositionY += 1200 * elapsedGameTime;
+            }                   
+        }
+    }
+
+    stopReelsOneByOne(timeNowTotalSeconds)
+    {     
+        var elapsedGameTime = timeNowTotalSeconds - this.prevTimeTotalSeconds;
+       
+        for(var idx = 0; idx < this.potionsArray.length; idx++)
+        {
+            if(timeNowTotalSeconds - this.stopReelsOneByOneStartTime >= idx*1 && !this.isReelsStopped[idx])
+            {
+                this.stopReel(this.potionsArray[idx],idx, elapsedGameTime);
+                
+            }
+            else if(!this.isReelsStopped[idx])
+            {
+                this.potionsArray[idx].tilePositionY += 1200 * elapsedGameTime;   
+            }
+        }
+
+        if(this.isReelsStopped.every(elem=> elem == true))
+        {
+            this.isReelsStopingOneByOneInSlotMachine = false;
+            this.isReelsStopped = this.isReelsStopped.map(elem => !elem);
+        }
+    }
+
+    stopReel(potion,idx,elapsedGameTime)
+    {
+        if((1200 * elapsedGameTime) + (potion.tilePositionY % 1090) > 1090)
+        {
+            potion.tilePositionY = 1090;
+            this.isReelsStopped[idx] = true;
+        }
+        else
+        {
+            potion.tilePositionY += 1200 * elapsedGameTime;
+        }   
     }
 }
