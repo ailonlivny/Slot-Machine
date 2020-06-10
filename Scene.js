@@ -30,7 +30,9 @@ class Scene extends Phaser.Scene
         this.load.image("slotContainer","assets/images/slotContainer.png");
         this.load.spritesheet("potionsCol", "assets/images/potionsCol.png",{ frameWidth: 142, frameHeight: 550});
         this.load.image("button_spin","assets/images/button_spin.png");
-        this.load.image("button_stop","assets/images/button_stop.png");      
+        this.load.image("button_stop","assets/images/button_stop.png");
+        this.load.audio('bg_sound', ['assets/BG_Music.wav']);
+        this.load.audio('spin_sound', ['assets/Spin.wav']);      
     }
 
     create()
@@ -58,7 +60,11 @@ class Scene extends Phaser.Scene
             var positionY = this.topSlotContainer + this.potionHeight;
             var potionTileSprite = this.add.tileSprite(positionX, positionY, 140, 415, 'potionsCol');
             this.potionsArray.push(potionTileSprite);
-        }       
+        }
+        
+        this.bgSound = this.sound.add("bg_sound", { loop: "true" });
+        this.spinSound = this.sound.add("spin_sound", {loop: "false"}); 
+        this.bgSound.play();
     }
 
     update()
@@ -105,7 +111,6 @@ class Scene extends Phaser.Scene
         }
 
         this.prevTimeTotalSeconds = timeNow;
-
     }
     
     spinButtonOnClick()
@@ -117,6 +122,7 @@ class Scene extends Phaser.Scene
         this.isAllReelsInSlotMachineSpinning = true;
         this.stopButton.disableInteractive();
         this.lastTimeSpinButtonWasClicked = this.time.now * 0.001;
+        this.spinSound.play();
     }
 
     stopButtonOnClick()
@@ -149,6 +155,7 @@ class Scene extends Phaser.Scene
                 this.spinButton.setInteractive();
                 this.spinButton.setVisible(true);
                 this.stopButton.setVisible(false);
+                this.spinSound.stop();
             }
             else
             {
@@ -178,6 +185,7 @@ class Scene extends Phaser.Scene
         {
             this.isReelsStopingOneByOneInSlotMachine = false;
             this.isReelsStopped = this.isReelsStopped.map(elem => !elem);
+            this.spinSound.stop();
         }
     }
 
